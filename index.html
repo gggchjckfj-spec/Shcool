@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>💌 رسالة خاصة</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+
+  body {
+    font-family: 'Segoe UI', 'Tahoma', sans-serif;
+    background: linear-gradient(-45deg, #0f0c29, #302b63, #24243e, #4b1248);
+    background-size: 400% 400%;
+    animation: bgMove 18s ease infinite;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  @keyframes bgMove {
+    0%   { background-position: 0% 50%; }
+    50%  { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+
+  /* ===== القلوب الطايرة في الخلفية ===== */
+  .hearts { position: fixed; inset: 0; overflow: hidden; pointer-events: none; z-index: 1; }
+  .heart {
+    position: absolute;
+    bottom: -60px;
+    opacity: 0;
+    animation: floatUp linear infinite;
+  }
+  @keyframes floatUp {
+    0%   { transform: translateY(0) scale(.6) rotate(0deg); opacity: 0; }
+    15%  { opacity: .55; }
+    100% { transform: translateY(-110vh) scale(1.2) rotate(25deg); opacity: 0; }
+  }
+
+  /* ===== المسرح ===== */
+  .stage {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+  }
+
+  /* ===== الجواب 💌 ===== */
+  .envelope-wrap {
+    text-align: center;
+    cursor: pointer;
+    user-select: none;
+    opacity: 0;
+    transform: translateY(40px) scale(.85);
+    transition: opacity 2.5s ease, transform 2.5s ease;
+  }
+  .envelope-wrap.show {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  .envelope-wrap.hide {
+    opacity: 0;
+    transform: translateY(-40px) scale(.7);
+    pointer-events: none;
+  }
+
+  .envelope {
+    font-size: 130px;
+    line-height: 1;
+    display: inline-block;
+    filter: drop-shadow(0 0 25px rgba(255, 130, 190, .55));
+    animation: floatEnvelope 2.8s ease-in-out infinite;
+  }
+  @keyframes floatEnvelope {
+    0%, 100% { transform: translateY(0) rotate(-3deg); }
+    50%      { transform: translateY(-15px) rotate(3deg); }
+  }
+
+  .hint {
+    margin-top: 18px;
+    color: #ffd6ea;
+    font-size: 20px;
+    letter-spacing: 1px;
+    text-shadow: 0 0 15px rgba(255, 120, 180, .8);
+    animation: blinkHint 1.8s ease-in-out infinite;
+  }
+  @keyframes blinkHint {
+    0%, 100% { opacity: .45; }
+    50%      { opacity: 1; }
+  }
+
+  /* ===== الرسالة ===== */
+  .letter {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: min(520px, 88vw);
+    max-height: 78vh;
+    overflow-y: auto;
+    padding: 38px 30px;
+    border-radius: 22px;
+    text-align: center;
+    background: rgba(255, 255, 255, .08);
+    border: 1px solid rgba(255, 255, 255, .22);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    box-shadow: 0 20px 60px rgba(0,0,0,.45),
+                0 0 40px rgba(255,100,170,.18) inset;
+
+    opacity: 0;
+    pointer-events: none;
+    transform: translate(-50%, -50%) translateY(-120px) scale(.85);
+    transition: opacity 1.2s ease, transform 1.4s cubic-bezier(.22, 1, .36, 1);
+  }
+  .letter.show {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translate(-50%, -50%) translateY(0) scale(1);
+  }
+
+  .letter-text {
+    color: #fff;
+    font-size: 21px;
+    line-height: 2;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    text-shadow: 0 0 12px rgba(255, 150, 200, .35);
+  }
+
+  .cursor {
+    display: inline-block;
+    width: 2px;
+    height: 1em;
+    background: #ff9ecb;
+    margin-inline-start: 3px;
+    vertical-align: -3px;
+    animation: cursorBlink .8s step-end infinite;
+  }
+  @keyframes cursorBlink { 50% { opacity: 0; } }
+</style>
+</head>
+<body>
+
+  <div class="hearts" id="hearts"></div>
+
+  <div class="stage">
+    <!-- الجواب -->
+    <div class="envelope-wrap" id="envelopeWrap">
+      <div class="envelope">💌</div>
+      <div class="hint">اضغط للفتح</div>
+    </div>
+
+    <!-- الرسالة -->
+    <div class="letter" id="letter">
+      <p class="letter-text">
+        <span id="typed"></span><span class="cursor" id="cursor"></span>
+      </p>
+    </div>
+  </div>
+
+<script>
+  /* =========================================================
+     ✏️✏️  اكتب رسالتك هنا بين العلامتين ` `  ✏️✏️
+     ========================================================= */
+  const MESSAGE = `يلا بينا نروح المدرسه ولا لسه مخلصتش بعبصه يكسمك خلص يلا بسرعه علشان نروح .`;
+
+  const TYPING_SPEED = 70;    // سرعة الكتابة بالمللي ثانية (أقل = أسرع)
+  const SHOW_DELAY   = 1500;  // وقت ظهور الجواب (1.5 ثانية) ✅
+
+  /* ===== القلوب الطايرة ===== */
+  const heartsBox = document.getElementById('hearts');
+  const emojis = ['💗','💖','🤍','💕','❤️'];
+  for (let i = 0; i < 18; i++) {
+    const h = document.createElement('span');
+    h.className = 'heart';
+    h.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+    h.style.left = Math.random() * 100 + '%';
+    h.style.fontSize = (14 + Math.random() * 20) + 'px';
+    h.style.animationDuration = (9 + Math.random() * 10) + 's';
+    h.style.animationDelay = (Math.random() * 12) + 's';
+    heartsBox.appendChild(h);
+  }
+
+  /* ===== العناصر ===== */
+  const envelopeWrap = document.getElementById('envelopeWrap');
+  const letter = document.getElementById('letter');
+  const typed = document.getElementById('typed');
+  const cursor = document.getElementById('cursor');
+
+  /* ===== ظهور الجواب بعد 1.5 ثانية ===== */
+  setTimeout(() => envelopeWrap.classList.add('show'), SHOW_DELAY);
+
+  /* ===== عند الضغط ===== */
+  let opened = false;
+
+  envelopeWrap.addEventListener('click', () => {
+    if (opened) return;
+    opened = true;
+
+    envelopeWrap.classList.add('hide');
+
+    setTimeout(() => {
+      letter.classList.add('show');
+      setTimeout(() => typeText(MESSAGE), 700); // تبدأ الكتابة بعد ظهور الرسالة
+    }, 600);
+  });
+
+  /* ===== الكتابة حرف حرف ===== */
+  function typeText(text) {
+    let i = 0;
+    typed.textContent = '';
+    const timer = setInterval(() => {
+      typed.textContent += text.charAt(i);
+      i++;
+      if (i >= text.length) {
+        clearInterval(timer);
+        cursor.style.display = 'none'; // يخفي المؤشر بعد ما تخلص الكتابة
+      }
+    }, TYPING_SPEED);
+  }
+</script>
+</body>
+</html>
